@@ -1,1 +1,330 @@
-hola como estas
+#include <iostream>
+#include <utility>
+#include <climits>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+#include <queue>
+using namespace std;
+
+struct Punto{
+
+	double* coordenadas;
+	int dimension;
+	
+	Punto(){
+		int dimension = 0;
+		coordenadas = new double[0];
+	}
+
+	Punto(int dim, double* coordena){
+		dimension = dim;
+		coordenadas = new double[dimension];
+		for (int i = 0; i < dimension; ++i)
+			coordenadas[i] = coordena[i];
+	}
+
+	Punto(int d){
+		dimension = d;
+		coordenadas = new double[d];
+	}
+
+	Punto(const Punto& p){
+		dimension = p.dimension;
+		coordenadas = new double[dimension];
+		int i = 0;
+		for (i; i < dimension; ++i)
+			coordenadas[i] = p.coordenadas[i];
+	}
+
+	//Distancia Euclidiana
+	double dist_eucli(Punto p){
+		double temp = 0;
+		for (int i = 0; i < p.dimension; ++i)
+		{
+			temp += pow(this->coordenadas[i] - p.coordenadas[i], 2);
+		}
+		return sqrt(temp);
+	}
+
+	//Print punto(coorndenada)
+	void mostrar_Punto(){
+		cout << "Punto: ";
+		int i = 0;
+		for (i; i < dimension; ++i)
+			cout << coordenadas[i] << " ";
+		cout << endl;
+	}
+	
+	//Comparamos dos puntos
+	bool es_igual(Punto p) {
+		if (this->dimension != p.dimension)
+			return false;
+		for (int i = 0; i < this->dimension; ++i)
+			if (this->coordenadas[i] != p.coordenadas[i])
+				return false;
+		return true;
+	}
+
+	// Copiar un punto
+	void copiar(Punto p){
+		dimension = p.dimension;
+		coordenadas = new double[dimension];
+		for (int i = 0; i < dimension; ++i)
+			coordenadas[i] = p.coordenadas[i];
+	}
+
+	//Comparar puntos
+	bool distinto(Punto p) {
+		return !es_igual(p);
+	}
+
+};
+
+struct kd_nodo{
+	Punto dato_num;
+	kd_nodo* hijo[2] = {};
+
+	kd_nodo(Punto p){
+		dato_num.copiar(p);
+		hijo[0] = nullptr;
+		hijo[1] = nullptr;
+	}
+};
+
+
+//ordenar vector de mayot a menor
+bool sortbysec(const pair<kd_nodo*, double>& a, const pair<kd_nodo*, double>& b){
+	return (a.second < b.second);
+}
+
+struct kd_tree{
+	kd_nodo* root;
+	int dimension;
+
+	kd_tree(int d){
+		root = nullptr;
+		dimension = d;
+	}
+
+	//recorrido inorden del arbol
+	void inorden(kd_nodo* p){
+		if (p){
+			inorden(p->hijo[0]);
+			p->dato_num.mostrar_Punto();
+			inorden(p->hijo[1]);
+		}
+	}
+
+	//Buscar un punto
+	bool buscar(Punto p, kd_nodo**& nodo_a_buscar, int coord = 0) {
+		
+		coord = coord % dimension;
+
+		if (*nodo_a_buscar == nullptr)
+			return false;
+
+		if ((*nodo_a_buscar)->dato_num.es_igual(p))
+			return true;
+
+		if (p.coordenadas[coord] > (*nodo_a_buscar)->dato_num.coordenadas[coord]){
+			nodo_a_buscar = &(*nodo_a_buscar)->hijo[1];
+			buscar(p, nodo_a_buscar, coord + 1);
+		}
+		else{
+			nodo_a_buscar = &(*nodo_a_buscar)->hijo[0];
+			buscar(p, nodo_a_buscar, coord + 1);
+		}
+	}
+
+	//Insertar un punto
+	void insertar(Punto p){
+		kd_nodo** nodo_a_buscar = &root;
+		if (!buscar(p, nodo_a_buscar))
+			*nodo_a_buscar = new kd_nodo(p);
+	}
+
+	//Vecino mas cercano
+	void vecino_cercano(kd_nodo* p_objetivo, kd_nodo* nodo_actual,kd_nodo*& vecino_cercanos_candidate, int profundidad = 0,double mejor_distancia = LLONG_MAX){
+		if (!nodo_actual)
+			return;
+
+		if (nodo_actual->dato_num.dist_eucli(p_objetivo->dato_num) < mejor_distancia){
+			mejor_distancia = nodo_actual->dato_num.dist_eucli(p_objetivo->dato_num);
+			vecino_cercanos_candidate = nodo_actual;
+		}
+
+		int eje = profundidad % dimension;
+		bool derecha = false;
+
+		if (p_objetivo->dato_num.coordenadas[eje] > nodo_actual->dato_num.coordenadas[eje]){
+			derecha = true;
+			vecino_cercano(p_objetivo, nodo_actual->hijo[1], vecino_cercanos_candidate, profundidad + 1, mejor_distancia);
+		}
+
+		else{
+			derecha = false;
+			vecino_cercano(p_objetivo, nodo_actual->hijo[0], vecino_cercanos_candidate, profundidad + 1, mejor_distancia);
+		}
+
+		if (fabs(p_objetivo->dato_num.coordenadas[eje] - nodo_actual->dato_num.coordenadas[eje] ) < mejor_distancia){
+			if (derecha)
+				vecino_cercano(p_objetivo, nodo_actual->hijo[0], vecino_cercanos_candidate, profundidad + 1, mejor_distancia);
+			else
+				vecino_cercano(p_objetivo, nodo_actual->hijo[1], vecino_cercanos_candidate, profundidad + 1, mejor_distancia);
+		}
+	}
+
+	//Borrar un punto
+	void borrar(Punto p){
+		kd_nodo** nodo_a_buscar = &root;
+		if (buscar(p, nodo_a_buscar)){
+
+			*nodo_a_buscar = nullptr;
+			cout << "Nodo borrado" << endl;
+		}
+		else cout << "No se encontro el nodo" << endl;
+	}
+
+
+
+	bool comparar(vector<pair<kd_nodo*, double>>& vecinos_candidatos, double temp){
+		for (int i = 0, s = vecinos_candidatos.size(); i < s; ++i){
+			if (temp < vecinos_candidatos[i].second)
+				return true;
+		}
+		return false;
+	}
+
+	//k vecinos cercanos, cola de prioridad
+	void k_vecino_cercano(kd_nodo* p_objetivo, kd_nodo* nodo_actual, vector<pair<kd_nodo*, double>>& vecinos_candidatos, int profundidad = 0){
+		if (!nodo_actual)
+			return;
+
+		vecinos_candidatos.push_back(pair<kd_nodo*, double>{nodo_actual, nodo_actual->dato_num.dist_eucli(p_objetivo->dato_num)});
+		sort(vecinos_candidatos.begin(), vecinos_candidatos.end(), sortbysec);
+		if (vecinos_candidatos.size() > dimension) vecinos_candidatos.pop_back();
+
+		int eje = profundidad % dimension;
+		bool derecha = false;
+		if (p_objetivo->dato_num.coordenadas[eje] < nodo_actual->dato_num.coordenadas[eje]){
+			derecha = true;
+			k_vecino_cercano(p_objetivo, nodo_actual->hijo[1], vecinos_candidatos, profundidad + 1);
+		}
+
+		else{
+			derecha = false;
+			k_vecino_cercano(p_objetivo, nodo_actual->hijo[0], vecinos_candidatos, profundidad + 1);
+		}
+
+		if (comparar(vecinos_candidatos, fabs( p_objetivo->dato_num.coordenadas[eje] - nodo_actual->dato_num.coordenadas[eje]))){
+			if (derecha) {
+				k_vecino_cercano(p_objetivo, nodo_actual->hijo[0], vecinos_candidatos, profundidad + 1);
+			}
+			else {
+				k_vecino_cercano(p_objetivo, nodo_actual->hijo[1], vecinos_candidatos, profundidad + 1);
+			}
+		}
+	}
+
+	//Busqueda de rango
+	void range_query(kd_nodo* p_objetivo, double rango_distancia, kd_nodo* nodo_actual, vector<pair<kd_nodo*, double>>& vecinos_candidatos, int profundidad = 0){
+		if (!nodo_actual)
+			return;
+
+		if (nodo_actual->dato_num.dist_eucli(p_objetivo->dato_num) <= rango_distancia){
+			vecinos_candidatos.push_back(pair<kd_nodo*, double>{nodo_actual, nodo_actual->dato_num.dist_eucli(p_objetivo->dato_num)});
+			sort(vecinos_candidatos.begin(), vecinos_candidatos.end(), sortbysec);
+		}
+
+		int eje = profundidad % dimension;
+		bool derecha = false;
+		if (p_objetivo->dato_num.coordenadas[eje] > nodo_actual->dato_num.coordenadas[eje]){
+			derecha = true;
+			range_query(p_objetivo, rango_distancia, nodo_actual->hijo[1], vecinos_candidatos, profundidad + 1);
+		}
+
+		else{
+			derecha = false;
+			range_query(p_objetivo, rango_distancia, nodo_actual->hijo[0], vecinos_candidatos, profundidad + 1);
+		}
+
+		if (fabs(p_objetivo->dato_num.coordenadas[eje] - nodo_actual->dato_num.coordenadas[eje]) < rango_distancia){
+			if (derecha) {
+				range_query(p_objetivo, rango_distancia, nodo_actual->hijo[0], vecinos_candidatos, profundidad + 1);
+			}
+
+			else {
+				range_query(p_objetivo, rango_distancia, nodo_actual->hijo[1], vecinos_candidatos, profundidad + 1);
+			}
+		}
+	}
+};
+
+
+
+int main()
+{
+	//Creamos los puntos del arbol
+	double arr1[2] = { 11, 38 };
+	Punto p1(2, arr1);
+	double arr2[2] = { 56, 24 };
+	Punto p2(2, arr2);
+	double arr3[2] = { 31, 10 };
+	Punto p3(2, arr3);
+	double arr4[2] = { 43, 42 };
+	Punto p4(2, arr4);
+	double arr5[2] = { 47, 78 };
+	Punto p5(2, arr5);
+	double arr6[2] = { 22, 12 };
+	Punto p6(2, arr6);
+
+
+	//Creamos el punto objetivo
+	double arr7[2] = { 30, 54 };
+	Punto p7(2, arr7);
+	kd_nodo* p_objetivo = new kd_nodo(p7), * resultado = nullptr;
+
+	
+	
+	//Insertamos los puntos con una dimensionalidad de 2
+	kd_tree arbol1(2);
+	arbol1.insertar(p1);
+	arbol1.insertar(p2);
+	arbol1.insertar(p3);
+	arbol1.insertar(p4);
+	arbol1.insertar(p5);
+	arbol1.insertar(p6);
+
+	//Hallamos el vecino mas cercano
+	cout << "Los Puntos son: " << endl;
+	arbol1.inorden(arbol1.root);
+	cout << endl << "El objetivo es el "; p_objetivo->dato_num.mostrar_Punto();
+	cout << endl << "El mas cercano es el ";
+	arbol1.vecino_cercano(p_objetivo, arbol1.root, resultado);
+	resultado->dato_num.mostrar_Punto();
+
+
+	//Hallamos la cola de prioridad
+	//En el vector el .first sera el punto almacenado y .second su distancia
+	vector<pair<kd_nodo*, double>> cola_prioridad;
+	arbol1.k_vecino_cercano(p_objetivo, arbol1.root, cola_prioridad);
+
+	cout << endl << "Los K vecinos mas cercanos son: " << endl;
+	for (int i = 0; i < cola_prioridad.size(); ++i)
+	{
+		cola_prioridad[i].first->dato_num.mostrar_Punto(); 
+	}
+
+
+	//Hallamos la busqueda por rango
+	//En el vector el.first sera el punto almacenado y.second su distancia
+	vector<pair<kd_nodo*, double>> vector_vecinos_area;
+	cout << endl;
+	arbol1.range_query(p_objetivo, 20, arbol1.root, vector_vecinos_area);
+	cout << endl << "Los vecinos que entran en el area son: " << endl;
+	for (int i = 0; i < vector_vecinos_area.size(); ++i)
+	{
+		vector_vecinos_area[i].first->dato_num.mostrar_Punto();
+	}
+}
