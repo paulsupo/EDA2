@@ -20,38 +20,41 @@ struct Punto{
 	Punto(int dim, double* coordena){
 		dimension = dim;
 		coordenadas = new double[dimension];
-		for (int i = 0; i < dimension; ++i)
+		for (int i = 0; i < dimension; i++)
 			coordenadas[i] = coordena[i];
 	}
 
-	Punto(int d){
-		dimension = d;
-		coordenadas = new double[d];
+	Punto(int dim){
+		coordenadas = new double[dim];
+		dimension = dim;
 	}
 
 	Punto(const Punto& p){
 		dimension = p.dimension;
 		coordenadas = new double[dimension];
 		int i = 0;
-		for (i; i < dimension; ++i)
+		for (i; i < dimension; i++)
 			coordenadas[i] = p.coordenadas[i];
 	}
 
 	//Distancia Euclidiana
 	double dist_eucli(Punto p){
-		double temp = 0;
-		for (int i = 0; i < p.dimension; ++i)
-		{
-			temp += pow(this->coordenadas[i] - p.coordenadas[i], 2);
+		double temp = 0, temp1 = 0;
+		for (int i = 0; i < p.dimension; i++){
+			temp = this->coordenadas[i] - p.coordenadas[i];
+			temp *= temp;
+			temp1 += temp;
+
 		}
-		return sqrt(temp);
+		temp1 = sqrt(temp1);
+		return temp1;
 	}
 
 	//Print punto(coorndenada)
 	void mostrar_Punto(){
 		cout << "Punto: ";
 		int i = 0;
-		for (i; i < dimension; ++i)
+		for (i; i < dimension; i++)
 			cout << coordenadas[i] << " ";
 		cout << endl;
 	}
@@ -60,7 +63,7 @@ struct Punto{
 	bool es_igual(Punto p) {
 		if (this->dimension != p.dimension)
 			return false;
-		for (int i = 0; i < this->dimension; ++i)
+		for (int i = 0; i < this->dimension; i++)
 			if (this->coordenadas[i] != p.coordenadas[i])
 				return false;
 		return true;
@@ -70,20 +73,15 @@ struct Punto{
 	void copiar(Punto p){
 		dimension = p.dimension;
 		coordenadas = new double[dimension];
-		for (int i = 0; i < dimension; ++i)
+		for (int i = 0; i < dimension; i++)
 			coordenadas[i] = p.coordenadas[i];
-	}
-
-	//Comparar puntos
-	bool distinto(Punto p) {
-		return !es_igual(p);
 	}
 
 };
 
 struct kd_nodo{
 	Punto dato_num;
-	kd_nodo* hijo[2] = {};
+	kd_nodo* hijo[2];
 
 	kd_nodo(Punto p){
 		dato_num.copiar(p);
@@ -93,8 +91,8 @@ struct kd_nodo{
 };
 
 
-//ordenar vector de mayot a menor
-bool sortbysec(const pair<kd_nodo*, double>& a, const pair<kd_nodo*, double>& b){
+//ordenar vector de mayor a menor
+bool ordenar(const pair<kd_nodo*, double>& a, const pair<kd_nodo*, double>& b){
 	return (a.second < b.second);
 }
 
@@ -202,7 +200,7 @@ struct kd_tree{
 			return;
 
 		vecinos_candidatos.push_back(pair<kd_nodo*, double>{nodo_actual, nodo_actual->dato_num.dist_eucli(p_objetivo->dato_num)});
-		sort(vecinos_candidatos.begin(), vecinos_candidatos.end(), sortbysec);
+		sort(vecinos_candidatos.begin(), vecinos_candidatos.end(), ordenar);
 		if (vecinos_candidatos.size() > dimension) vecinos_candidatos.pop_back();
 
 		int eje = profundidad % dimension;
@@ -234,7 +232,7 @@ struct kd_tree{
 
 		if (nodo_actual->dato_num.dist_eucli(p_objetivo->dato_num) <= rango_distancia){
 			vecinos_candidatos.push_back(pair<kd_nodo*, double>{nodo_actual, nodo_actual->dato_num.dist_eucli(p_objetivo->dato_num)});
-			sort(vecinos_candidatos.begin(), vecinos_candidatos.end(), sortbysec);
+			sort(vecinos_candidatos.begin(), vecinos_candidatos.end(), ordenar);
 		}
 
 		int eje = profundidad % dimension;
@@ -266,35 +264,30 @@ struct kd_tree{
 int main()
 {
 	//Creamos los puntos del arbol
-	double arr1[2] = { 11, 38 };
-	Punto p1(2, arr1);
-	double arr2[2] = { 56, 24 };
-	Punto p2(2, arr2);
-	double arr3[2] = { 31, 10 };
-	Punto p3(2, arr3);
-	double arr4[2] = { 43, 42 };
-	Punto p4(2, arr4);
-	double arr5[2] = { 47, 78 };
-	Punto p5(2, arr5);
-	double arr6[2] = { 22, 12 };
-	Punto p6(2, arr6);
+	double arr[2] = { 11, 38 };
+	double arr1[2] = { 56, 24 };
+	double arr2[2] = { 31, 10 };
+	double arr3[2] = { 43, 42 };
+	double arr4[2] = { 47, 78 };
+	double arr5[2] = { 22, 12 };
+	
 
+	Punto pun1(2, arr);		Punto pun2(2, arr1);
+	Punto pun3(2, arr2);	Punto pun4(2, arr3);
+	Punto pun5(2, arr4);	Punto pun6(2, arr5);
 
 	//Creamos el punto objetivo
-	double arr7[2] = { 30, 54 };
-	Punto p7(2, arr7);
-	kd_nodo* p_objetivo = new kd_nodo(p7), * resultado = nullptr;
+	double objetiv[2] = { 30, 54 };
+	Punto pun7(2, objetiv);
+	kd_nodo* p_objetivo = new kd_nodo(pun7), * resultado = nullptr;
 
 	
 	
 	//Insertamos los puntos con una dimensionalidad de 2
 	kd_tree arbol1(2);
-	arbol1.insertar(p1);
-	arbol1.insertar(p2);
-	arbol1.insertar(p3);
-	arbol1.insertar(p4);
-	arbol1.insertar(p5);
-	arbol1.insertar(p6);
+	arbol1.insertar(pun1);	arbol1.insertar(pun2);
+	arbol1.insertar(pun3);	arbol1.insertar(pun4);
+	arbol1.insertar(pun5);	arbol1.insertar(pun6);
 
 	//Hallamos el vecino mas cercano
 	cout << "Los Puntos son: " << endl;
