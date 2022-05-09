@@ -1,7 +1,187 @@
 #include <iostream>
+#include <utility>
+#include <vector>
 using namespace std;
 
-int main{
-	cout<<"Hola mundo"<<endl;
-	return 0;
+
+struct punto{
+    pair<double, double> coordenada;
+
+    //Constructores
+
+    punto(){
+        coordenada.first = coordenada.second = 0;
+    }
+
+    punto(pair<double, double> coord) {
+        coordenada.first = coord.first;
+        coordenada.second = coord.second;
+    }
+
+    punto(double x, double y) {
+        coordenada.first = x;
+        coordenada.second = y;
+    }
+
+    punto(const punto& p){
+        coordenada = p.coordenada;
+    }
+
+
+    //Print punto
+    void obten_punto(){
+        cout << "Punto: " << coordenada.first << ", " << coordenada.second << endl;
+    }
+};
+
+struct q_nodo{
+    punto* rectangulo[2];       //Creamos el rectangulo a partir de dos puntos
+    vector<punto> puntos;       //Vector que guarda los puntos de un rectangulo
+    q_nodo* hijos[4];           //Rectangulos hijos
+
+    //Creamos los rectangulos hijos y los igualamos a null
+
+    q_nodo(punto mas_alto, punto mas_bajo){
+        rectangulo[0] = new punto(mas_alto);
+        rectangulo[1] = new punto(mas_bajo);
+
+        for (int i = 0; i < 4; i++)
+            hijos[i] = nullptr;
+    }
+
+    q_nodo(){
+        rectangulo[0] = new punto();
+        rectangulo[1] = new punto();
+
+        for (int i = 0; i < 4; i++)
+            hijos[i] = nullptr;
+    }
+
+    q_nodo(const q_nodo& nodo_dado){
+        rectangulo[0] = new punto(*nodo_dado.rectangulo[0]);
+        rectangulo[1] = new punto(*nodo_dado.rectangulo[1]);
+        puntos = nodo_dado.puntos;
+
+        for (int i = 0; i < 4; i++)
+            hijos[i] = nullptr;
+    }
+
+    q_nodo(punto mas_alto, punto mas_bajo, vector<punto> puntos_){
+        rectangulo[0] = new punto(mas_alto);
+        rectangulo[1] = new punto(mas_bajo);
+        puntos = puntos_;
+
+        for (int i = 0; i < 4; i++)
+            hijos[i] = nullptr;
+    }
+
+    // Funcion Insertar en el vecto de puntos
+    void insertar(punto p){
+        puntos.push_back(p);
+    }
+
+    // Imprimimos los puntos encontrados en el rectangulo
+    void printQN()
+    {
+        cout << endl << "En el rectangulo: " << endl << "\t"; 
+        rectangulo[0]->obten_punto();
+        cout << "\t"; 
+        rectangulo[1]->obten_punto();
+        cout << "Encontramos los puntos: " << endl;
+        int tamaño = puntos.size();
+        for (int i = 0; i < tamaño; i++){
+            cout << "\t"; 
+            puntos[i].obten_punto();
+        }
+    }
+};
+
+struct quad_tree
+{
+    int profundidad;
+    q_nodo* root;
+
+
+    // Contructores del arbol
+    quad_tree(){
+        profundidad = 0;
+        root = new q_nodo(punto(), punto());
+    }
+
+    quad_tree(punto mas_alto, punto mas_bajo, int nivel){
+        profundidad = nivel;
+        root = new q_nodo(mas_alto, mas_bajo);
+
+        q_nodo** gen = &root;
+        crear_arbol(gen, profundidad);
+    }
+
+    void recorrido(q_nodo* nodo_dado)
+    {
+        if (nodo_dado != nullptr)
+        {
+            nodo_dado->printQN();
+            recorrido(nodo_dado->hijos[0]);
+            recorrido(nodo_dado->hijos[1]);
+            
+            recorrido(nodo_dado->hijos[2]);
+            recorrido(nodo_dado->hijos[3]);
+        }
+    }
+
+    void crear_arbol(q_nodo** gen, int profundidad){
+        if (profundidad > 1){
+            double tempx = (*gen)->rectangulo[1]->coordenada.first - ((*gen)->rectangulo[1]->coordenada.first - (*gen)->rectangulo[0]->coordenada.first) / 2;
+            double tempy = (*gen)->rectangulo[0]->coordenada.second - ((*gen)->rectangulo[0]->coordenada.second - (*gen)->rectangulo[1]->coordenada.second) / 2;
+            (*gen)->hijos[0] = new q_nodo(punto(pair<double, double>{ (*gen)->rectangulo[0]->coordenada.first, tempy }), punto(pair<double, double>{ tempx, (*gen)->rectangulo[1]->coordenada.second }));
+            (*gen)->hijos[1] = new q_nodo(punto({ (*gen)->rectangulo[0]->coordenada.first, (*gen)->rectangulo[0]->coordenada.second }), punto({ tempx, tempy }));
+            (*gen)->hijos[2] = new q_nodo(punto({ tempx,  (*gen)->rectangulo[0]->coordenada.second }), punto({ (*gen)->rectangulo[1]->coordenada.first, tempy }));
+            (*gen)->hijos[3] = new q_nodo(punto({ tempx, tempy }), punto({ (*gen)->rectangulo[1]->coordenada.first, (*gen)->rectangulo[1]->coordenada.second }));
+
+            for (int i = 0; i < 4; i++)
+                crear_arbol(&(*gen)->hijos[i], profundidad - 1);
+        }
+    }
+
+    bool puntos_adentro(punto p, q_nodo qn){
+        if (p.coordenada.first <= qn.rectangulo[1]->coordenada.first and p.coordenada.second >= qn.rectangulo[1]->coordenada.second and p.coordenada.first >= qn.rectangulo[0]->coordenada.first and p.coordenada.second <= qn.rectangulo[0]->coordenada.second)
+            return true;
+        return false;
+    }
+
+    void insertar(punto p) {
+        q_nodo** busco = &root;
+        (*busco)->puntos.push_back(p);
+        ins(p, busco);
+    }
+
+    void ins(punto p, q_nodo** ptr){
+        for (int i = 0; i < 4; i++){
+            if ((*ptr)->hijos[i] and puntos_adentro(p, *(*ptr)->hijos[i])){
+                (*ptr)->hijos[i]->puntos.push_back(p);
+                ins(p, &(*ptr)->hijos[i]);
+            }
+        }
+    }
+
+
+};
+
+
+
+int main()
+{
+    punto maximo(0, 100), minimo(100, 0);
+    quad_tree tree(maximo, minimo, 2);
+
+    tree.insertar(punto(4, 1));
+    tree.insertar(punto(11, 85));
+    tree.insertar(punto(75, 31));
+    tree.insertar(punto(56, 58));
+    tree.insertar(punto(40, 42));
+    tree.insertar(punto(82, 50));
+    tree.insertar(punto(37, 24));
+    tree.insertar(punto(26, 62));
+
+    tree.recorrido(tree.root);
 }
