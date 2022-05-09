@@ -123,7 +123,6 @@ struct quad_tree
             nodo_dado->printQN();
             recorrido(nodo_dado->hijos[0]);
             recorrido(nodo_dado->hijos[1]);
-            
             recorrido(nodo_dado->hijos[2]);
             recorrido(nodo_dado->hijos[3]);
         }
