@@ -194,6 +194,6 @@ int main(){
     int capacidad = 5000;
     espacio_muldidimencional curvaz(dimension, capacidad);
 
-    curvaz.prueba(k, cantidad[0]);
+    curvaz.prueba(k, cantidad[1]);
     cout << endl << "Termine" << endl;
 }
